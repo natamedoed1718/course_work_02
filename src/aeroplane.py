@@ -114,3 +114,13 @@ class Aeroplane:
             except (ValueError, TypeError, KeyError) as e:
                 print(f"Пропущен некорректный объект: {e} | Данные: {item}")
         return objects
+
+    def to_dict(self) -> dict:
+        """Преобразует объект в словарь для сохранения в JSON."""
+        return {
+            "icao24": self._icao24,
+            "callsign": self._callsign,
+            "origin_country": self._origin_country,
+            "altitude": self._altitude,
+            "velocity": self._velocity,
+        }

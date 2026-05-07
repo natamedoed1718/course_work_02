@@ -6,16 +6,21 @@ class AbstractStorage(ABC):
     """Абстрактный класс для работы с хранилищем (файл, БД и т.д.)."""
 
     @abstractmethod
-    def add(self, data: dict[str, Any]) -> None:
-        """Добавляет запись (словарь) в хранилище."""
+    def add_aeroplane(self, data: Any) -> bool:
+        """Добавляет самолёт в хранилище."""
         pass
 
     @abstractmethod
-    def get_all(self) -> list[dict[str, Any]]:
-        """Возвращает все записи."""
+    def get_aeroplanes(self) -> list[Any]:
+        """Возвращает все самолёты."""
         pass
 
     @abstractmethod
-    def delete(self, predicate) -> int:
-        """Удаляет записи, удовлетворяющие условию predicate(record). Возвращает кол-во удалённых."""
+    def delete_aeroplane(self, icao24: str) -> bool:
+        """Удаляет самолёт по ICAO24 коду."""
+        pass
+
+    @abstractmethod
+    def clear_all(self) -> None:
+        """Очищает всё хранилище."""
         pass

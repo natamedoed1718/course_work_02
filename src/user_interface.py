@@ -5,9 +5,10 @@ from src.json_storage import JSONStorage
 
 def user_interaction():
     """Основной цикл общения с пользователем через консоль."""
-    print("✈ Добро пожаловать в систему мониторинга самолётов ✈")
+    print("Добро пожаловать в систему мониторинга самолётов")
     api = AeroplanesAPI()
     storage = JSONStorage()
+    current_aeroplanes = []  # Локальная переменная
 
     while True:
         print("\nВыберите действие:")
@@ -33,11 +34,8 @@ def user_interaction():
                 if not raw_data:
                     print("Самолётов не найдено или страна не имеет воздушного пространства.")
                 else:
-                    # Сохраняем в глобальную переменную (в реальном проекте лучше через объект состояния)
-                    global current_aeroplanes
                     current_aeroplanes = Aeroplane.cast_to_object_list(raw_data)
                     print(f"Найдено самолётов: {len(current_aeroplanes)}")
-                    # Показываем первые 5 для примера
                     for plane in current_aeroplanes[:5]:
                         print(f"  - {plane}")
                     if len(current_aeroplanes) > 5:
@@ -54,11 +52,6 @@ def user_interaction():
                 if n <= 0:
                     print("N должно быть положительным.")
                     continue
-                # Сортировка по убыванию высоты (None – в конец)
-                sorted_planes = sorted(
-                    current_aeroplanes, key=lambda p: (p.altitude is None, p.altitude or 0), reverse=False
-                )  # сначала None
-                # Выше всех те, у кого altitude не None и большое
                 sorted_by_alt_desc = sorted(
                     current_aeroplanes, key=lambda p: (p.altitude is None, p.altitude or 0), reverse=True
                 )
@@ -81,7 +74,7 @@ def user_interaction():
             countries = [c.strip().lower() for c in countries_input.split()]
             filtered = [p for p in current_aeroplanes if p.origin_country.lower() in countries]
             print(f"\nНайдено самолётов из {countries_input}: {len(filtered)}")
-            for plane in filtered[:20]:  # ограничим вывод
+            for plane in filtered[:20]:
                 print(f"  - {plane}")
             if len(filtered) > 20:
                 print("  ... (показаны первые 20)")
@@ -92,42 +85,26 @@ def user_interaction():
                 continue
             count = 0
             for plane in current_aeroplanes:
-                # Преобразуем объект в словарь
-                plane_dict = {
-                    "icao24": plane.icao24,
-                    "callsign": plane.callsign,
-                    "origin_country": plane.origin_country,
-                    "altitude": plane.altitude,
-                    "velocity": plane.velocity,
-                }
-                storage.add(plane_dict)
-                count += 1
+                if storage.add_aeroplane(plane):  # Передаём объект, а не словарь
+                    count += 1
             print(f"Сохранено {count} самолётов в {storage.file_path}")
 
         elif choice == "5":
-            stored = storage.get_all()
-            if not stored:
+            stored_planes = storage.get_aeroplanes()  # Исправлено: get_aeroplanes
+            if not stored_planes:
                 print("Хранилище пусто.")
             else:
-                print(f"Всего записей в хранилище: {len(stored)}")
-                # Покажем последние 10
-                for rec in stored[-10:]:
-                    callsign = rec.get("callsign", "N/A")
-                    country = rec.get("origin_country", "?")
-                    alt = rec.get("altitude")
-                    alt_str = f"{alt:.0f}" if alt is not None else "—"
-                    print(f"  - {callsign} ({country}) – высота {alt_str} м")
+                print(f"Всего записей в хранилище: {len(stored_planes)}")
+                for plane in stored_planes[-10:]:
+                    print(f"  - {plane}")
 
         elif choice == "6":
             confirm = input("Удалить все данные из JSON-файла? (y/n): ")
             if confirm.lower() == "y":
-                deleted = storage.delete(lambda _: True)
-                print(f"Удалено записей: {deleted}")
+                storage.clear_all()  # Исправлено: clear_all
+                print("Хранилище очищено")
             else:
                 print("Операция отменена.")
 
         else:
             print("Неверный выбор. Пожалуйста, введите цифру от 0 до 6.")
-
-
-current_aeroplanes = []  # Глобальная переменная для хранения последних полученных самолётов

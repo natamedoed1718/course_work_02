@@ -14,7 +14,7 @@ class AbstractAeroplaneAPI(ABC):
         """Получает список самолётов в заданной области через OpenSky."""
         pass
 
+    @abstractmethod
     def get_aeroplanes_by_country(self, country_name: str) -> list[dict]:
-        """Комбинирует два метода: по названию страны -> bbox -> самолёты."""
-        bbox = self.get_country_bounding_box(country_name)
-        return self.get_aeroplanes_in_bbox(bbox)
+        """Получает самолёты по названию страны."""
+        pass
