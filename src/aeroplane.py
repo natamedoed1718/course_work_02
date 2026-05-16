@@ -7,8 +7,8 @@ class Aeroplane:
         self._icao24 = icao24
         self._callsign = callsign
         self._origin_country = origin_country
-        self.altitude = altitude  # используем setter для валидации
-        self.velocity = velocity  # используем setter для валидации
+        self.altitude = altitude
+        self.velocity = velocity
 
     # region Геттеры и сеттеры с валидацией
     @property
@@ -45,19 +45,77 @@ class Aeroplane:
 
     # endregion
 
-    # region Методы сравнения (по скорости и высоте)
-    def __eq__(self, other: "Aeroplane") -> bool:
+    # region Методы сравнения
+    def compare_by_altitude(self, other: "Aeroplane") -> int:
+        """
+        Сравнивает два самолёта по высоте.
+        Возвращает:
+        1 если текущий выше,
+        -1 если ниже,
+        0 если равны или нет данных
+        """
+        if not isinstance(other, Aeroplane):
+            return NotImplemented
+
+        if self.altitude is None and other.altitude is None:
+            return 0
+        if self.altitude is None:
+            return -1
+        if other.altitude is None:
+            return 1
+
+        if self.altitude > other.altitude:
+            return 1
+        elif self.altitude < other.altitude:
+            return -1
+        else:
+            return 0
+
+    def compare_by_velocity(self, other: "Aeroplane") -> int:
+        """
+        Сравнивает два самолёта по скорости.
+        Возвращает:
+        1 если текущий быстрее,
+        -1 если медленнее,
+        0 если равны или нет данных
+        """
+        if not isinstance(other, Aeroplane):
+            return NotImplemented
+
+        if self.velocity is None and other.velocity is None:
+            return 0
+        if self.velocity is None:
+            return -1
+        if other.velocity is None:
+            return 1
+
+        if self.velocity > other.velocity:
+            return 1
+        elif self.velocity < other.velocity:
+            return -1
+        else:
+            return 0
+
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Aeroplane):
             return NotImplemented
         return self.velocity == other.velocity and self.altitude == other.altitude
 
-    def __lt__(self, other: "Aeroplane") -> bool:
+    def __lt__(self, other: object) -> bool:
         if not isinstance(other, Aeroplane):
             return NotImplemented
         # Сравниваем по высоте, если одинаковая – по скорости
         if self.altitude != other.altitude:
-            return (self.altitude or 0) < (other.altitude or 0)
-        return (self.velocity or 0) < (other.velocity or 0)
+            if self.altitude is None:
+                return True
+            if other.altitude is None:
+                return False
+            return self.altitude < other.altitude
+        if self.velocity is None:
+            return True
+        if other.velocity is None:
+            return False
+        return self.velocity < other.velocity
 
     def __le__(self, other: "Aeroplane") -> bool:
         return self < other or self == other
@@ -79,14 +137,14 @@ class Aeroplane:
     def __str__(self) -> str:
         vel_kmh = (self.velocity * 3.6) if self.velocity is not None else "N/A"
         alt_m = f"{self.altitude:.0f}" if self.altitude is not None else "N/A"
-        return f"✈ {self.callsign} ({self._origin_country}) | " f"Высота: {alt_m} м | Скорость: {vel_kmh} км/ч"
+        return f"✈ {self.callsign} ({self._origin_country}) | Высота: {alt_m} м | Скорость: {vel_kmh} км/ч"
 
     @classmethod
     def from_api_dict(cls, data: dict) -> "Aeroplane":
         """Фабричный метод для создания объекта из словаря OpenSky."""
         altitude = data.get("altitude")
         velocity = data.get("velocity")
-        # Конвертируем None в None, а числа оставляем как есть
+
         if altitude is not None and altitude != "":
             altitude = float(altitude)
         else:
@@ -102,6 +160,17 @@ class Aeroplane:
             origin_country=data.get("origin_country", "Unknown"),
             altitude=altitude,
             velocity=velocity,
+        )
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Aeroplane":
+        """Метод для создания объекта из словаря (для JSON)."""
+        return cls(
+            icao24=data.get("icao24", ""),
+            callsign=data.get("callsign", ""),
+            origin_country=data.get("origin_country", "Unknown"),
+            altitude=data.get("altitude"),
+            velocity=data.get("velocity"),
         )
 
     @staticmethod

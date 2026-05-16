@@ -30,8 +30,10 @@ class AeroplanesAPI(AbstractAeroplaneAPI):
             if not data:
                 raise ValueError(f"Страна '{country_name}' не найдена")
 
-            # Получаем boundingbox из ответа
-            boundingbox = data[0]["boundingbox"]
+            boundingbox = data[0].get("boundingbox")
+            if not boundingbox or len(boundingbox) != 4:
+                raise ValueError(f"Некорректный формат bounding box для страны '{country_name}'")
+
             south = float(boundingbox[0])
             north = float(boundingbox[1])
             west = float(boundingbox[2])
@@ -39,6 +41,8 @@ class AeroplanesAPI(AbstractAeroplaneAPI):
 
             return (south, north, west, east)
 
+        except requests.exceptions.Timeout:
+            raise ConnectionError(f"Превышено время ожидания при запросе к Nominatim для страны '{country_name}'")
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"Ошибка запроса к Nominatim: {e}")
         except (KeyError, IndexError, ValueError) as e:
@@ -52,10 +56,10 @@ class AeroplanesAPI(AbstractAeroplaneAPI):
         south, north, west, east = bbox
 
         params = {
-            "lamin": south,  # южная широта
-            "lamax": north,  # северная широта
-            "lomin": west,  # западная долгота
-            "lomax": east,  # восточная долгота
+            "lamin": south,
+            "lamax": north,
+            "lomin": west,
+            "lomax": east,
         }
 
         try:
@@ -65,31 +69,39 @@ class AeroplanesAPI(AbstractAeroplaneAPI):
             data = response.json()
             states = data.get("states", [])
 
-            # Преобразуем сырые данные в список словарей
+            if not isinstance(states, list):
+                return []
+
             aeroplanes_list = []
             for state in states:
-                if state is None:
+                if state is None or not isinstance(state, (list, tuple)):
+                    continue
+
+                # Проверяем, что у state достаточно элементов
+                if len(state) < 14:
                     continue
 
                 aeroplane_dict = {
-                    "icao24": state[0],  # уникальный код самолёта
-                    "callsign": state[1].strip() if state[1] else "N/A",  # позывной
-                    "origin_country": state[2],  # страна регистрации
-                    "time_position": state[3],  # время позиции
-                    "last_contact": state[4],  # последний контакт
-                    "longitude": state[5],  # долгота
-                    "latitude": state[6],  # широта
-                    "altitude": state[7],  # высота (метры)
-                    "on_ground": state[8],  # на земле
-                    "velocity": state[9],  # скорость (м/с)
-                    "heading": state[10],  # курс
-                    "vertical_rate": state[11],  # вертикальная скорость
-                    "geo_altitude": state[13],  # геометрическая высота
+                    "icao24": state[0] if state[0] else "",
+                    "callsign": state[1].strip() if state[1] else "N/A",
+                    "origin_country": state[2] if state[2] else "Unknown",
+                    "time_position": state[3],
+                    "last_contact": state[4],
+                    "longitude": state[5],
+                    "latitude": state[6],
+                    "altitude": state[7],
+                    "on_ground": state[8],
+                    "velocity": state[9],
+                    "heading": state[10],
+                    "vertical_rate": state[11],
+                    "geo_altitude": state[13] if len(state) > 13 else None,
                 }
                 aeroplanes_list.append(aeroplane_dict)
 
             return aeroplanes_list
 
+        except requests.exceptions.Timeout:
+            raise ConnectionError("Превышено время ожидания при запросе к OpenSky")
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"Ошибка запроса к OpenSky: {e}")
 
